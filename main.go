@@ -123,6 +123,9 @@ func getAccepter(input *dpfm_api_input_reader.SDC) []string {
 			"AddressesByLocalRegion", "AddressesByLocalRegions",
 			"Campaign", "Campaigns",
 			"Game", "Games",
+			"Counter", "CountersByEvents",
+			"Participation", "Participations",
+			"Attendance",  "Attendances",
 			"PointTransaction", "PointTransactions",
 			"PointConditionElement", "PointConditionElements",
 		}

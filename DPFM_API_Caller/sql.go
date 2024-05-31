@@ -25,6 +25,9 @@ func (c *DPFMAPICaller) readSqlProcess(
 	var partner *[]dpfm_api_output_formatter.Partner
 	var campaign *[]dpfm_api_output_formatter.Campaign
 	var game *[]dpfm_api_output_formatter.Game
+	var counter *[]dpfm_api_output_formatter.Counter
+	var participation *[]dpfm_api_output_formatter.Participation
+	var attendance *[]dpfm_api_output_formatter.Attendance
 	var pointTransaction *[]dpfm_api_output_formatter.PointTransaction
 	var pointConditionElement *[]dpfm_api_output_formatter.PointConditionElement
 
@@ -94,6 +97,30 @@ func (c *DPFMAPICaller) readSqlProcess(
 			func() {
 				game = c.Games(mtx, input, output, errs, log)
 			}()
+		case "Counter":
+			func() {
+				counter = c.Counter(mtx, input, output, errs, log)
+			}()
+		case "CountersByEvents":
+			func() {
+				counter = c.CountersByEvents(mtx, input, output, errs, log)
+			}()
+		case "Participation":
+			func() {
+				participation = c.Participation(mtx, input, output, errs, log)
+			}()
+		case "Participations":
+			func() {
+				participation = c.Participations(mtx, input, output, errs, log)
+			}()
+		case "Attendance":
+			func() {
+				attendance = c.Attendance(mtx, input, output, errs, log)
+			}()
+		case "Attendances":
+			func() {
+				attendance = c.Attendances(mtx, input, output, errs, log)
+			}()
 		case "PointTransaction":
 			func() {
 				pointTransaction = c.PointTransaction(mtx, input, output, errs, log)
@@ -124,6 +151,9 @@ func (c *DPFMAPICaller) readSqlProcess(
 		Address:               address,
 		Campaign:              campaign,
 		Game:                  game,
+		Counter:			   counter,
+		Participation:		   participation,
+		Attendance:			   attendance,
 		PointTransaction:      pointTransaction,
 		PointConditionElement: pointConditionElement,
 	}
@@ -779,6 +809,256 @@ func (c *DPFMAPICaller) Games(
 	defer rows.Close()
 
 	data, err := dpfm_api_output_formatter.ConvertToGame(rows)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+
+	return data
+}
+
+func (c *DPFMAPICaller) Counter(
+	mtx *sync.Mutex,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	errs *[]error,
+	log *logger.Logger,
+) *[]dpfm_api_output_formatter.Counter {
+	var args []interface{}
+	where := fmt.Sprintf("WHERE Event = %d ", input.Header.Event)
+
+	rows, err := c.db.Query(
+		`SELECT *
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_event_counter_data AS counter
+		` + where + ` ORDER BY counter.IsMarkedForDeletion ASC, counter.IsCancelled ASC, counter.IsReleased ASC;`,
+	)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToCounter(rows)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+
+	return data
+}
+
+func (c *DPFMAPICaller) CountersByEvents(
+	mtx *sync.Mutex,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	errs *[]error,
+	log *logger.Logger,
+) *[]dpfm_api_output_formatter.Counter {
+	log.Info("CountersByEvents")
+	in := ""
+
+	for iCounter, vCounter := range input.Headers {
+		event := vCounter.Event
+		if iCounter == 0 {
+			in = fmt.Sprintf(
+				"( '%d' )",
+				event,
+			)
+			continue
+		}
+		in = fmt.Sprintf(
+			"%s ,( '%d' )",
+			in,
+			event,
+		)
+	}
+
+	where := fmt.Sprintf(" WHERE ( Event ) IN ( %s ) ", in)
+
+	rows, err := c.db.Query(
+		`SELECT *
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_event_counter_data AS counter
+		` + where + ` ORDER BY counter.IsMarkedForDeletion ASC, counter.IsCancelled ASC, counter.IsReleased ASC, counter.Event ASC;`,
+	)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToCounter(rows)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+
+	return data
+}
+
+func (c *DPFMAPICaller) Participation(
+	mtx *sync.Mutex,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	errs *[]error,
+	log *logger.Logger,
+) *[]dpfm_api_output_formatter.Participation {
+	var args []interface{}
+	where := fmt.Sprintf("WHERE Event = %d", input.Header.Event)
+
+	participationIDs := ""
+	for _, v := range input.Header.Participation {
+		participationIDs = fmt.Sprintf("%s, %d", participationIDs, v.Participator)
+	}
+
+	if len(participationIDs) != 0 {
+		where = fmt.Sprintf("%s\nAND Participator IN ( %s ) ", where, participationIDs[1:])
+	}
+	rows, err := c.db.Query(
+		`SELECT *
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_event_participation_data
+		`+where+` ORDER BY IsCancelled ASC, Event ASC, Participator ASC ;`, args...,
+	)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToParticipation(rows)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+
+	return data
+}
+
+func (c *DPFMAPICaller) Participations(
+	mtx *sync.Mutex,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	errs *[]error,
+	log *logger.Logger,
+) *[]dpfm_api_output_formatter.Participation {
+	participation := &dpfm_api_input_reader.Participation{}
+	if len(input.Header.Participation) > 0 {
+		participation = &input.Header.Participation[0]
+	}
+	where := "WHERE 1 = 1"
+
+	if input.Header.Event != 0 {
+		where = fmt.Sprintf("WHERE Event = %d", input.Header.Event)
+	}
+
+	if participation != nil {
+		if participation.IsReleased != nil {
+			where = fmt.Sprintf("%s\nAND participation.IsReleased = %v", where, *participation.IsReleased)
+		}
+		if participation.IsCancelled != nil {
+			where = fmt.Sprintf("%s\nAND participation.IsCancelled = %v", where, *participation.IsCancelled)
+		}
+		if participation.IsMarkedForDeletion != nil {
+			where = fmt.Sprintf("%s\nAND participation.IsMarkedForDeletion = %v", where, *participation.IsMarkedForDeletion)
+		}
+	}
+
+	rows, err := c.db.Query(
+		`SELECT *
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_event_participation_data as participation
+		` + where + ` ORDER BY participation.IsMarkedForDeletion ASC, participation.IsCancelled ASC, participation.IsReleased ASC, participation.Event ASC, participation.Participation ASC ;`)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToParticipation(rows)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+
+	return data
+}
+
+func (c *DPFMAPICaller) Attendance(
+	mtx *sync.Mutex,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	errs *[]error,
+	log *logger.Logger,
+) *[]dpfm_api_output_formatter.Attendance {
+	var args []interface{}
+	where := fmt.Sprintf("WHERE Event = %d", input.Header.Event)
+
+	attendanceIDs := ""
+	for _, v := range input.Header.Attendance {
+		attendanceIDs = fmt.Sprintf("%s, %d", attendanceIDs, v.Attender)
+	}
+
+	if len(attendanceIDs) != 0 {
+		where = fmt.Sprintf("%s\nAND Attender IN ( %s ) ", where, attendanceIDs[1:])
+	}
+	rows, err := c.db.Query(
+		`SELECT *
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_event_attendance_data
+		`+where+` ORDER BY IsCancelled ASC, Event ASC, Attender ASC ;`, args...,
+	)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToAttendance(rows)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+
+	return data
+}
+
+func (c *DPFMAPICaller) Attendances(
+	mtx *sync.Mutex,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	errs *[]error,
+	log *logger.Logger,
+) *[]dpfm_api_output_formatter.Attendance {
+	attendance := &dpfm_api_input_reader.Attendance{}
+	if len(input.Header.Attendance) > 0 {
+		attendance = &input.Header.Attendance[0]
+	}
+	where := "WHERE 1 = 1"
+
+	if input.Header.Event != 0 {
+		where = fmt.Sprintf("WHERE Event = %d", input.Header.Event)
+	}
+
+	if attendance != nil {
+		if attendance.IsReleased != nil {
+			where = fmt.Sprintf("%s\nAND attendance.IsReleased = %v", where, *attendance.IsReleased)
+		}
+		if attendance.IsCancelled != nil {
+			where = fmt.Sprintf("%s\nAND attendance.IsCancelled = %v", where, *attendance.IsCancelled)
+		}
+		if attendance.IsMarkedForDeletion != nil {
+			where = fmt.Sprintf("%s\nAND attendance.IsMarkedForDeletion = %v", where, *attendance.IsMarkedForDeletion)
+		}
+	}
+
+	rows, err := c.db.Query(
+		`SELECT *
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_event_attendance_data as attendance
+		` + where + ` ORDER BY attendance.IsMarkedForDeletion ASC, attendance.IsCancelled ASC, attendance.IsReleased ASC, attendance.Event ASC, attendance.Attendance ASC ;`)
+	if err != nil {
+		*errs = append(*errs, err)
+		return nil
+	}
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToAttendance(rows)
 	if err != nil {
 		*errs = append(*errs, err)
 		return nil

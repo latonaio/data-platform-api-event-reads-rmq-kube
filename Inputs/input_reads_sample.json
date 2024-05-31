@@ -112,6 +112,40 @@
 				"IsMarkedForDeletion": null
 			}
 		],
+		"Counter": [
+			{
+				"NumberOfLikes": null,
+				"NumberOfParticipations": null,
+				"NumberOfAttendances": null,
+				"CreationDate": "",
+				"CreationTime": "",
+				"LastChangeDate": "",
+				"LastChangeTime": ""
+			}
+		],
+		"Participation": [
+			{
+				"Participator": null,
+				"Participation": null,
+				"CreationDate": "",
+				"CreationTime": "",
+				"LastChangeDate": "",
+				"LastChangeTime": "",
+				"IsCancelled": null
+			}
+		],
+		"Attendance": [
+			{
+				"Attender": null,
+				"Attendance": null,
+				"Participation": null,
+				"CreationDate": "",
+				"CreationTime": "",
+				"LastChangeDate": "",
+				"LastChangeTime": "",
+				"IsCancelled": null
+			}
+		],
 		"PointTransaction": [
 			{
 				"Sender": null,

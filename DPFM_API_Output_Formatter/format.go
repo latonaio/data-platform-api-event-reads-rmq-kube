@@ -306,6 +306,140 @@ func ConvertToGame(rows *sql.Rows) (*[]Game, error) {
 	return &game, nil
 }
 
+func ConvertToCounter(rows *sql.Rows) (*[]Counter, error) {
+	defer rows.Close()
+	counter := make([]Counter, 0)
+
+	i := 0
+	for rows.Next() {
+		i++
+		pm := &requests.Counter{}
+
+		err := rows.Scan(
+			&pm.Event,
+			&pm.NumberOfLikes,
+			&pm.NumberOfParticipations,
+			&pm.NumberOfAttendances,
+			&pm.CreationDate,
+			&pm.CreationTime,
+			&pm.LastChangeDate,
+			&pm.LastChangeTime,
+		)
+		if err != nil {
+			fmt.Printf("err = %+v \n", err)
+			return &counter, err
+		}
+
+		data := pm
+		counter = append(counter, Counter{
+			Event:					data.Event,
+			NumberOfLikes:			data.NumberOfLikes,
+			NumberOfParticipations:	data.NumberOfParticipations,
+			NumberOfAttendances:	data.NumberOfAttendances,
+			CreationDate:			data.CreationDate,
+			CreationTime:			data.CreationTime,
+			LastChangeDate:			data.LastChangeDate,
+			LastChangeTime:			data.LastChangeTime,
+		})
+	}
+	if i == 0 {
+		fmt.Printf("DBに対象のレコードが存在しません。")
+		return &counter, nil
+	}
+
+	return &counter, nil
+}
+
+func ConvertToParticipation(rows *sql.Rows) (*[]Participation, error) {
+	defer rows.Close()
+	participation := make([]Participation, 0)
+
+	i := 0
+	for rows.Next() {
+		i++
+		pm := &requests.Participation{}
+
+		err := rows.Scan(
+			&pm.Event,
+			&pm.Participator,
+			&pm.Participation,
+			&pm.CreationDate,
+			&pm.CreationTime,
+			&pm.LastChangeDate,
+			&pm.LastChangeTime,
+			&pm.IsCancelled,
+		)
+		if err != nil {
+			fmt.Printf("err = %+v \n", err)
+			return &participation, err
+		}
+
+		data := pm
+		participation = append(participation, Participation{
+			Event:								data.Event,
+			Participator:						data.Participator,
+			Participation:						data.Participation,
+			CreationDate:						data.CreationDate,
+			CreationTime:						data.CreationTime,
+			LastChangeDate:						data.LastChangeDate,
+			LastChangeTime:						data.LastChangeTime,
+			IsCancelled:						data.IsCancelled,
+		})
+	}
+	if i == 0 {
+		fmt.Printf("DBに対象のレコードが存在しません。")
+		return &participation, nil
+	}
+
+	return &participation, nil
+}
+
+func ConvertToAttendance(rows *sql.Rows) (*[]Attendance, error) {
+	defer rows.Close()
+	attendance := make([]Attendance, 0)
+
+	i := 0
+	for rows.Next() {
+		i++
+		pm := &requests.Attendance{}
+
+		err := rows.Scan(
+			&pm.Event,
+			&pm.Attender,
+			&pm.Attendance,
+			&pm.Participation,
+			&pm.CreationDate,
+			&pm.CreationTime,
+			&pm.LastChangeDate,
+			&pm.LastChangeTime,
+			&pm.IsCancelled,
+		)
+		if err != nil {
+			fmt.Printf("err = %+v \n", err)
+			return &attendance, err
+		}
+
+		data := pm
+		attendance = append(attendance, Attendance{
+			Event:								data.Event,
+			Attender:							data.Attender,
+			Attendance:							data.Attendance,
+			Participation:						data.Participation,
+			CreationDate:						data.CreationDate,
+			CreationTime:						data.CreationTime,
+			LastChangeDate:						data.LastChangeDate,
+			LastChangeTime:						data.LastChangeTime,
+			IsCancelled:						data.IsCancelled,
+		})
+	}
+	if i == 0 {
+		fmt.Printf("DBに対象のレコードが存在しません。")
+		return &attendance, nil
+	}
+
+	return &attendance, nil
+}
+
 func ConvertToPointTransaction(rows *sql.Rows) (*[]PointTransaction, error) {
 	defer rows.Close()
 	pointTransaction := make([]PointTransaction, 0)

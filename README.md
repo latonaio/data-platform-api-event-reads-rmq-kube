@@ -20,6 +20,9 @@ data-platform-api-event-reads-rmq-kube には、次の API をコールするた
 * A_Address（イベント - 住所）
 * A_Campaign（イベント - キャンペーン）
 * A_Game（イベント - ゲーム）
+* A_Counter（イベント - カウンタ）
+* A_Participation（イベント - 参加(権利)）
+* A_Attendance（イベント - 現地参加）
 * A_PointTransaction（イベント - ポイント取引）
 * A_PointConditionElement（イベント - ポイント条件要素）
 
